@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Космический корабль «Союз МС» (Cinema 4D / OBJ + PBR) & PetroBPM (Python + Java + EXE)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    body {
+      background: #0b1120;
+      color: #e2e8f0;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      backdrop-filter: blur(12px);
+    }
+    .stage-node {
+      transition: all 0.25s ease;
+    }
+    .stage-node:hover {
+      transform: translateY(-2px);
+      border-color: rgba(56, 189, 248, 0.65);
+    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-800 bg-slate-950/90 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg">
+          3D+BPM
+        </div>
+        <div>
+          <h1 class="text-base md:text-lg font-bold text-white tracking-tight">
+            Soyuz MS 3D (Cinema 4D / OBJ + PBR) &amp; PetroBPM НГК (Python + Java + EXE)
+          </h1>
+          <p class="text-xs text-slate-400">
+            3D-модель корабля «Союз МС» с UV-текстурами + Система создания и тестирования на пригодность бизнес-процессов нефтегазового производства
+          </p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex flex-wrap gap-2" id="mainTabs">
+        <button onclick="switchTab('tab3d')" id="btn-tab3d" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow">
+          1. 3D Модель «Союз МС» (OBJ + Cinema 4D + Текстура)
+        </button>
+        <button onclick="switchTab('tabBpm')" id="btn-tabBpm" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">
+          2. Бизнес-процессы НГК (Python + Java Тест Пригодности)
+        </button>
+        <button onclick="switchTab('tabExe')" id="btn-tabExe" class="px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700">
+          3. Автоустановщик Windows (.EXE) и Исходный Код
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
+
+    <!-- =================================================================== -->
+    <!-- TAB 1: 3D MODEL SOYUZ MS (CINEMA 4D + WAVEFRONT OBJ + PBR TEXTURES) -->
+    <!-- =================================================================== -->
+    <section id="tab3d" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Left 8 Cols: Interactive 3D WebGL OBJ + MTL + PBR Viewport -->
+        <div class="lg:col-span-8 glass-card rounded-2xl overflow-hidden flex flex-col">
+          <div class="px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2 bg-slate-900/70">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="text-xs font-semibold uppercase tracking-wider text-sky-400">
+                Интерактивный 3D-просмотрщик модели: soyuz_spacecraft.obj + PBR UV Atlas (2048×2048)
+              </span>
+            </div>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button onclick="setCameraPreset('iso')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-200">Ракурс Референса</button>
+              <button onclick="setCameraPreset('front')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-200">Стыковочный узел «Курс»</button>
+              <button onclick="setCameraPreset('side')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-200">Профиль (БО+СА+ПАО)</button>
+              <button onclick="toggleWireframe()" id="btnWireframe" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-amber-300">Сетка (Wireframe)</button>
+              <button onclick="toggleAutoRotate()" id="btnRotate" class="px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-600 text-xs text-white">Автовращение</button>
+            </div>
+          </div>
+
+          <!-- 3D Canvas Container -->
+          <div class="relative w-full h-[480px] bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950" id="viewport3d">
+            <div id="loading3d" class="absolute inset-0 flex items-center justify-center bg-slate-950/80 z-10 text-sm text-sky-300 font-medium">
+              Загрузка геометрии soyuz_spacecraft.obj (6 113 вершин, 5 350 полигонов) и PBR-текстур...
+            </div>
+            <div class="absolute bottom-3 left-3 z-10 bg-slate-950/85 border border-slate-800 rounded-lg px-3 py-2 text-[11px] text-slate-300 space-y-0.5 pointer-events-none">
+              <div class="font-semibold text-white">Космический корабль «Союз МС» (Soyuz MS)</div>
+              <div>Формат: <span class="text-sky-400">Wavefront .OBJ + .MTL + Cinema 4D Python Generator</span></div>
+              <div id="meshStatsText">Вершин: 6 113 | Полигонов: 5 350 | Групп: 12 | UV-карта: 2048×2048 PBR</div>
+            </div>
+          </div>
+
+          <!-- Download Bar for 3D Assets -->
+          <div class="p-4 bg-slate-900/90 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap gap-2">
+              <a href="/assets/model/soyuz_spacecraft.obj" download="soyuz_spacecraft.obj"
+                 class="px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow">
+                ⬇ Скачать 3D Модель (.OBJ, 746 КБ)
+              </a>
+              <a href="/assets/model/soyuz_spacecraft.mtl" download="soyuz_spacecraft.mtl"
+                 class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold">
+                ⬇ Материалы (.MTL)
+              </a>
+              <a href="/assets/textures/soyuz_diffuse.png" download="soyuz_diffuse.png"
+                 class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold">
+                ⬇ Текстура Diffuse (PNG)
+              </a>
+              <a href="/c4d_plugin/c4d_soyuz_generator.py" download="c4d_soyuz_generator.py"
+                 class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold">
+                ⬇ Скрипт Cinema 4D (c4d_soyuz_generator.py)
+              </a>
+            </div>
+            <a href="/assets/downloads/Soyuz_MS_Cinema4D_OBJ_Package.zip" download="Soyuz_MS_Cinema4D_OBJ_Package.zip"
+               class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shadow">
+              📦 Скачать полный архив Cinema 4D + OBJ + Текстуры (.ZIP)
+            </a>
+          </div>
+        </div>
+
+        <!-- Right 4 Cols: Reference Comparison + UV Texture Atlas Preview -->
+        <div class="lg:col-span-4 space-y-6">
+          <!-- Reference Image Card -->
+          <div class="glass-card rounded-2xl p-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Исходный референс корабля «Союз МС»</h3>
+              <span class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Точное соответствие</span>
+            </div>
+            <div class="bg-white rounded-xl p-2 flex items-center justify-center">
+              <img src="/assets/reference/soyuz_reference.jpg" alt="Soyuz Reference" class="max-h-44 object-contain rounded" />
+            </div>
+            <ul class="text-xs text-slate-300 space-y-1.5 leading-relaxed">
+              <li>• <b>Бытовой отсек (БО):</b> сферический модуль в мятой тёмно-антрацитовой экранно-вакуумной теплоизоляции (ЭВТИ), стыковочный узел «Курс», параболические антенны, поручни и шеврон «СОЮЗ» + флаг РФ + Роскосмос.</li>
+              <li>• <b>Спускаемый аппарат (СА):</b> колоколообразный модуль с бежевыми силовыми ремнями, зеленым перископом ВСК-4 и иллюминаторами.</li>
+              <li>• <b>Приборно-агрегатный отсек (ПАО):</b> белый радиаторный корпус, двигательный отсек КТДУ-80 и 2 четырёхсекционные солнечные батареи с бежево-золотистыми фотоэлементами.</li>
+            </ul>
+          </div>
+
+          <!-- PBR Texture Maps Card -->
+          <div class="glass-card rounded-2xl p-4 space-y-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">Наложенные PBR-текстуры (UV-Атлас 2048×2048)</h3>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <a href="/assets/textures/soyuz_diffuse.png" target="_blank" class="block bg-slate-900 p-1.5 rounded-lg border border-slate-800 hover:border-sky-500">
+                <img src="/assets/textures/soyuz_diffuse.png" alt="Diffuse Map" class="w-full h-24 object-cover rounded" />
+                <span class="block mt-1 text-[11px] font-medium text-slate-300">Albedo / Diffuse</span>
+              </a>
+              <a href="/assets/textures/soyuz_normal.png" target="_blank" class="block bg-slate-900 p-1.5 rounded-lg border border-slate-800 hover:border-sky-500">
+                <img src="/assets/textures/soyuz_normal.png" alt="Normal Map" class="w-full h-24 object-cover rounded" />
+                <span class="block mt-1 text-[11px] font-medium text-slate-300">Normal (Складки ЭВТИ)</span>
+              </a>
+              <a href="/assets/textures/soyuz_roughness.png" target="_blank" class="block bg-slate-900 p-1.5 rounded-lg border border-slate-800 hover:border-sky-500">
+                <img src="/assets/textures/soyuz_roughness.png" alt="Roughness Map" class="w-full h-24 object-cover rounded" />
+                <span class="block mt-1 text-[11px] font-medium text-slate-300">Roughness / Specular</span>
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-400">
+              Все 3 карты автоматически подключены в <code>soyuz_spacecraft.mtl</code> и в скрипте <code>c4d_soyuz_generator.py</code> через UVW-развёртку.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 2: OIL & GAS BPM DESIGNER & SUITABILITY TESTING (PYTHON + JAVA) -->
+    <!-- =================================================================== -->
+    <section id="tabBpm" class="space-y-6 hidden">
+      <!-- Top Control & Verdict Banner -->
+      <div class="glass-card rounded-2xl p-5 space-y-5">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Python 3.13 + Java 21 OpenJDK Simulation Core</span>
+            <h2 class="text-lg font-bold text-white">
+              Конструктор и тестирование на пригодность бизнес-процессов нефтегазового производства (6 этапов НГК)
+            </h2>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="loadScenario('nominal')" id="scen-nominal"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white">
+              Штатный режим (ГОСТ Р 51858)
+            </button>
+            <button onclick="loadScenario('eco_modernized')" id="scen-eco_modernized"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-emerald-300">
+              Модернизированный Цифровой НГК (Евро-6)
+            </button>
+            <button onclick="loadScenario('overload_hazard')" id="scen-overload_hazard"
+                    class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-rose-300">
+              Стресс-тест: Перегрузка и риск нефтешлама
+            </button>
+            <a href="/api/bpm/bpmn?scenario=nominal" download="petrobpm_oilgas_workflow.bpmn.xml"
+               class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white">
+              ⬇ Экспорт схемы BPMN 2.0 (.XML)
+            </a>
+          </div>
+        </div>
+
+        <!-- Interactive Simulation Sliders & Java Engine Trigger -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <label class="block text-xs text-slate-400 mb-1">Коэффициент подачи пластового флюида: <span id="lblFeedScale" class="text-sky-400 font-bold">1.00x</span></label>
+            <input type="range" id="inpFeedScale" min="0.60" max="1.45" step="0.05" value="1.00"
+                   oninput="document.getElementById('lblFeedScale').innerText = parseFloat(this.value).toFixed(2)+'x'"
+                   class="w-full accent-sky-500" />
+          </div>
+          <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <label class="block text-xs text-slate-400 mb-1">Фактор обводненности / шламообразования: <span id="lblSludgeFactor" class="text-amber-400 font-bold">1.00x</span></label>
+            <input type="range" id="inpSludgeFactor" min="0.50" max="2.20" step="0.10" value="1.00"
+                   oninput="document.getElementById('lblSludgeFactor').innerText = parseFloat(this.value).toFixed(2)+'x'"
+                   class="w-full accent-amber-500" />
+          </div>
+          <div class="bg-slate-900/80 p-3 rounded-xl border border-slate-800">
+            <label class="block text-xs text-slate-400 mb-1">Итераций Монте-Карло (Java 21 Core):</label>
+            <select id="inpMonteCarlo" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white">
+              <option value="500">500 прогонов (Быстрый тест)</option>
+              <option value="1000" selected>1 000 прогонов (Стандарт ПБ ОПО)</option>
+              <option value="5000">5 000 прогонов (Глубокая верификация)</option>
+            </select>
+          </div>
+          <div>
+            <button onclick="runBpmEvaluation()" id="btnRunBpm"
+                    class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg">
+              ▶ Запустить тест на пригодность (Java + Python)
+            </button>
+          </div>
+        </div>
+
+        <!-- Global KPI Summary Strip -->
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-3 pt-2">
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Индекс пригодности БП</div>
+            <div id="kpiOverallIndex" class="text-2xl font-extrabold text-emerald-400">—</div>
+            <div id="kpiVerdictBadge" class="text-[10px] text-slate-300 mt-0.5">Проверка...</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Устойчивость Монте-Карло</div>
+            <div id="kpiMonteCarlo" class="text-2xl font-bold text-sky-400">—</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">Безотказных циклов</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Выход товарного продукта</div>
+            <div id="kpiOutputProduct" class="text-xl font-bold text-white">—</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">т/сут (сдача в систему)</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Образование нефтешлама</div>
+            <div id="kpiSludgeGen" class="text-xl font-bold text-amber-400">—</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">т/сут по 5 этапам</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Рекуперация из шлама</div>
+            <div id="kpiSludgeRecycled" class="text-xl font-bold text-emerald-300">—</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">т/сут возврата УВ</div>
+          </div>
+          <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3">
+            <div class="text-[11px] text-slate-400">Операционные затраты OPEX</div>
+            <div id="kpiOpex" class="text-xl font-bold text-indigo-300">—</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">млн руб / сутки</div>
+          </div>
+        </div>
+
+        <!-- Verdict Banner -->
+        <div id="verdictBanner" class="p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div>
+            <span class="font-bold uppercase tracking-wider text-emerald-300">Вердикт верификатора пригодности:</span>
+            <span id="verdictText" class="ml-2 text-white font-semibold">Загрузка расчета Java 21...</span>
+          </div>
+          <div class="text-slate-300">
+            Лимитирующий участок (Узкое место): <span id="bottleneckText" class="font-bold text-amber-300">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6-Stage Interactive BPM Process Chain Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="stagesGrid">
+        <!-- Populated dynamically by JS from Java/Python API -->
+      </div>
+    </section>
+
+    <!-- =================================================================== -->
+    <!-- TAB 3: WINDOWS AUTO-INSTALLER (.EXE) & SOURCE CODE INSPECTOR        -->
+    <!-- =================================================================== -->
+    <section id="tabExe" class="space-y-6 hidden">
+      <div class="glass-card rounded-2xl p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-400">Дистрибутив для Windows 10 / 11 (x64)</span>
+            <h2 class="text-xl font-bold text-white">Автоустановщик PetroBPM_Soyuz3D_Setup.exe (Python + Java + 3D OBJ)</h2>
+            <p class="text-xs text-slate-300 mt-1">
+              Гибридный самораспаковывающийся исполняемый модуль Windows PE32+ (.EXE) со встроенным автоустановщиком зависимостей Python 3 / OpenJDK 21, скриптами Inno Setup (.iss), NSIS (.nsi) и 3D-моделью корабля «Союз МС».
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a href="/assets/downloads/PetroBPM_Soyuz3D_Setup.exe" download="PetroBPM_Soyuz3D_Setup.exe"
+               class="px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white font-bold text-xs shadow-lg flex items-center gap-2">
+              💻 Скачать Автоустановщик PetroBPM_Soyuz3D_Setup.exe
+            </a>
+            <a href="/installer/Run_PetroBPM_Studio.bat" download="Run_PetroBPM_Studio.bat"
+               class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs">
+              ⬇ Скачать Run_PetroBPM_Studio.bat
+            </a>
+          </div>
+        </div>
+
+        <!-- Source Code Viewer Tabs -->
+        <div class="pt-4 border-t border-slate-800 space-y-3">
+          <div class="flex flex-wrap gap-2">
+            <button onclick="showCode('c4d_script')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-sky-300">
+              Cinema 4D Python Script (c4d_soyuz_generator.py)
+            </button>
+            <button onclick="showCode('java_engine')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-amber-300">
+              Java 21 BPM Engine (OilGasBpmEngine.java)
+            </button>
+            <button onclick="showCode('inno_setup')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-emerald-300">
+              Inno Setup EXE Script (PetroBPM_Soyuz3D_Setup.iss)
+            </button>
+            <button onclick="showCode('windows_bat')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-indigo-300">
+              Windows Auto-Launcher (Run_PetroBPM_Studio.bat)
+            </button>
+            <button onclick="showCode('mtl_file')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-pink-300">
+              Wavefront Material (soyuz_spacecraft.mtl)
+            </button>
+          </div>
+          <pre id="codeViewer" class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs text-slate-200 overflow-x-auto max-h-[460px] font-mono leading-relaxed">Загрузка исходного кода...</pre>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    // =========================================================================
+    // TAB NAVIGATION
+    // =========================================================================
+    function switchTab(tabId) {
+      ['tab3d', 'tabBpm', 'tabExe'].forEach(id => {
+        document.getElementById(id).classList.toggle('hidden', id !== tabId);
+        const btn = document.getElementById('btn-' + id);
+        if (id === tabId) {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow';
+        } else {
+          btn.className = 'px-3.5 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 hover:bg-slate-700';
+        }
+      });
+      if (tabId === 'tab3d' && window.onResize3D) {
+        setTimeout(window.onResize3D, 60);
+      }
+    }
+
+    // =========================================================================
+    // THREE.JS WAVEFRONT .OBJ + PBR UV TEXTURE PARSER & VIEWER
+    // =========================================================================
+    let scene, camera, renderer, controls, spacecraftGroup;
+    let isWireframe = false;
+    let autoRotate = true;
+
+    async function initSoyuz3DViewer() {
+      const container = document.getElementById('viewport3d');
+      const w = container.clientWidth || 800;
+      const h = container.clientHeight || 480;
+
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(38, w / h, 0.1, 200);
+      // Set initial camera angle matching the user's Soyuz MS reference image
+      camera.position.set(-6.2, 4.1, 6.8);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setSize(w, h);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.outputEncoding = THREE.sRGBEncoding;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.target.set(0, 0.1, 0.4);
+
+      // Studio 3-point lighting
+      const ambient = new THREE.AmbientLight(0xffffff, 0.72);
+      scene.add(ambient);
+
+      const keyLight = new THREE.DirectionalLight(0xfffbf0, 1.25);
+      keyLight.position.set(-8, 12, 10);
+      scene.add(keyLight);
+
+      const fillLight = new THREE.DirectionalLight(0x90b8ff, 0.65);
+      fillLight.position.set(10, -5, -8);
+      scene.add(fillLight);
+
+      const rimLight = new THREE.DirectionalLight(0xffffff, 0.55);
+      rimLight.position.set(0, 8, -12);
+      scene.add(rimLight);
+
+      // Subtle orbital reference grid
+      const grid = new THREE.GridHelper(16, 16, 0x1e293b, 0x0f172a);
+      grid.position.y = -2.2;
+      scene.add(grid);
+
+      // Load PBR Textures generated by generate_soyuz_3d.py
+      const texLoader = new THREE.TextureLoader();
+      const diffuseTex = await new Promise((resolve) => texLoader.load('/assets/textures/soyuz_diffuse.png', resolve));
+      const normalTex = await new Promise((resolve) => texLoader.load('/assets/textures/soyuz_normal.png', resolve));
+      diffuseTex.encoding = THREE.sRGBEncoding;
+      diffuseTex.flipY = true;
+      normalTex.flipY = true;
+
+      // Fetch and parse Wavefront OBJ `/assets/model/soyuz_spacecraft.obj`
+      const objResp = await fetch('/assets/model/soyuz_spacecraft.obj');
+      const objText = await objResp.text();
+      spacecraftGroup = parseWavefrontObj(objText, diffuseTex, normalTex);
+      scene.add(spacecraftGroup);
+
+      document.getElementById('loading3d').classList.add('hidden');
+
+      window.onResize3D = () => {
+        const cw = container.clientWidth;
+        const ch = container.clientHeight;
+        if (cw > 0 && ch > 0) {
+          camera.aspect = cw / ch;
+          camera.updateProjectionMatrix();
+          renderer.setSize(cw, ch);
+        }
+      };
+      window.addEventListener('resize', window.onResize3D);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        if (autoRotate && spacecraftGroup) {
+          spacecraftGroup.rotation.y += 0.0035;
+        }
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+
+    function parseWavefrontObj(objText, diffuseTex, normalTex) {
+      const vList = [[0, 0, 0]];
+      const vtList = [[0, 0]];
+      const vnList = [[0, 1, 0]];
+      const groupBuckets = {};
+      let currentGroup = 'default';
+      let currentMtl = 'mat_evti_blanket';
+
+      const lines = objText.split('\n');
+      for (let raw of lines) {
+        const line = raw.trim();
+        if (!line || line.startsWith('#')) continue;
+        const parts = line.split(/\s+/);
+        const cmd = parts[0];
+        if (cmd === 'v') {
+          vList.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])]);
+        } else if (cmd === 'vt') {
+          vtList.push([parseFloat(parts[1]), parseFloat(parts[2])]);
+        } else if (cmd === 'vn') {
+          vnList.push([parseFloat(parts[1]), parseFloat(parts[2]), parseFloat(parts[3])]);
+        } else if (cmd === 'g') {
+          currentGroup = parts[1] || 'default';
+          if (!groupBuckets[currentGroup]) {
+            groupBuckets[currentGroup] = { mtl: currentMtl, pos: [], uv: [], norm: [] };
+          }
+        } else if (cmd === 'usemtl') {
+          currentMtl = parts[1] || 'mat_evti_blanket';
+          if (!groupBuckets[currentGroup]) {
+            groupBuckets[currentGroup] = { mtl: currentMtl, pos: [], uv: [], norm: [] };
+          } else {
+            groupBuckets[currentGroup].mtl = currentMtl;
+          }
+        } else if (cmd === 'f') {
+          const verts = parts.slice(1).map(tok => {
+            const sp = tok.split('/');
+            return [
+              parseInt(sp[0], 10),
+              sp[1] ? parseInt(sp[1], 10) : 0,
+              sp[2] ? parseInt(sp[2], 10) : 0
+            ];
+          });
+          const bucket = groupBuckets[currentGroup];
+          // Triangulate polygon fan
+          for (let i = 1; i < verts.length - 1; i++) {
+            const tri = [verts[0], verts[i], verts[i + 1]];
+            for (const [vi, vti, vni] of tri) {
+              const vp = vList[vi] || [0, 0, 0];
+              const vt = vtList[vti] || [0, 0];
+              const vn = vnList[vni] || [0, 1, 0];
+              bucket.pos.push(vp[0], vp[1], vp[2]);
+              bucket.uv.push(vt[0], vt[1]);
+              bucket.norm.push(vn[0], vn[1], vn[2]);
+            }
+          }
+        }
+      }
+
+      const root = new THREE.Group();
+      const matParams = {
+        mat_evti_blanket:   { roughness: 0.48, metalness: 0.25, normalScale: new THREE.Vector2(0.9, 0.9) },
+        mat_kevlar_strap:   { roughness: 0.72, metalness: 0.08, normalScale: new THREE.Vector2(0.4, 0.4) },
+        mat_solar_panels:   { roughness: 0.22, metalness: 0.45, normalScale: new THREE.Vector2(0.5, 0.5) },
+        mat_pao_white_hull: { roughness: 0.38, metalness: 0.15, normalScale: new THREE.Vector2(0.6, 0.6) },
+        mat_titanium_metal: { roughness: 0.26, metalness: 0.75, normalScale: new THREE.Vector2(0.3, 0.3) },
+        mat_periscope_green:{ roughness: 0.42, metalness: 0.22, normalScale: new THREE.Vector2(0.3, 0.3) },
+        mat_porthole_glass: { roughness: 0.10, metalness: 0.85, normalScale: new THREE.Vector2(0.1, 0.1) },
+        mat_white_antenna:  { roughness: 0.35, metalness: 0.30, normalScale: new THREE.Vector2(0.2, 0.2) }
+      };
+
+      for (const [gName, data] of Object.entries(groupBuckets)) {
+        if (data.pos.length === 0) continue;
+        const geom = new THREE.BufferGeometry();
+        geom.setAttribute('position', new THREE.Float32BufferAttribute(data.pos, 3));
+        geom.setAttribute('uv', new THREE.Float32BufferAttribute(data.uv, 2));
+        geom.setAttribute('normal', new THREE.Float32BufferAttribute(data.norm, 3));
+
+        const mp = matParams[data.mtl] || matParams.mat_evti_blanket;
+        const mat = new THREE.MeshStandardMaterial({
+          map: diffuseTex,
+          normalMap: normalTex,
+          normalScale: mp.normalScale,
+          roughness: mp.roughness,
+          metalness: mp.metalness,
+          side: THREE.DoubleSide
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.name = gName;
+        root.add(mesh);
+      }
+
+      // Tilt slightly to match the reference perspective
+      root.rotation.x = 0.18;
+      root.rotation.y = -0.55;
+      return root;
+    }
+
+    function setCameraPreset(preset) {
+      if (!camera || !controls) return;
+      autoRotate = false;
+      if (preset === 'iso') {
+        camera.position.set(-6.2, 4.1, 6.8);
+      } else if (preset === 'front') {
+        camera.position.set(0.0, 1.2, 8.2);
+      } else if (preset === 'side') {
+        camera.position.set(-9.0, 0.8, 0.0);
+      }
+      controls.target.set(0, 0.1, 0.3);
+      controls.update();
+    }
+
+    function toggleWireframe() {
+      isWireframe = !isWireframe;
+      if (spacecraftGroup) {
+        spacecraftGroup.traverse(obj => {
+          if (obj.isMesh && obj.material) {
+            obj.material.wireframe = isWireframe;
+          }
+        });
+      }
+    }
+
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      const btn = document.getElementById('btnRotate');
+      btn.className = autoRotate
+        ? 'px-2.5 py-1 rounded bg-sky-700 hover:bg-sky-600 text-xs text-white'
+        : 'px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300';
+    }
+
+    // =========================================================================
+    // OIL & GAS BPM SUITABILITY ENGINE (PYTHON + JAVA 21 BACKEND)
+    // =========================================================================
+    let currentScenario = 'nominal';
+    let customCapacities = {};
+
+    function loadScenario(scen) {
+      currentScenario = scen;
+      customCapacities = {};
+      ['nominal', 'eco_modernized', 'overload_hazard'].forEach(s => {
+        const b = document.getElementById('scen-' + s);
+        if (b) {
+          b.className = (s === scen)
+            ? 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white shadow'
+            : 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300';
+        }
+      });
+      runBpmEvaluation();
+    }
+
+    async function runBpmEvaluation() {
+      const feedScale = parseFloat(document.getElementById('inpFeedScale').value || '1.0');
+      const sludgeFactor = parseFloat(document.getElementById('inpSludgeFactor').value || '1.0');
+      const monteCarlo = parseInt(document.getElementById('inpMonteCarlo').value || '1000', 10);
+
+      const resp = await fetch('/api/bpm/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenario: currentScenario,
+          feedScale,
+          sludgeFactor,
+          monteCarlo,
+          customCapacities
+        })
+      });
+      const data = await resp.json();
+      renderBpmResults(data);
+    }
+
+    function updateStageCapacity(stageId, newCap) {
+      customCapacities[stageId] = parseFloat(newCap);
+      runBpmEvaluation();
+    }
+
+    function renderBpmResults(data) {
+      if (!data || !data.stages) return;
+
+      document.getElementById('kpiOverallIndex').innerText = data.overallSuitabilityIndex.toFixed(2) + '%';
+      document.getElementById('kpiMonteCarlo').innerText = data.monteCarloStabilityPct.toFixed(1) + '%';
+      document.getElementById('kpiOutputProduct').innerText = data.meanCommercialOutputTonsDay.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+      document.getElementById('kpiSludgeGen').innerText = data.totalSludgeGeneratedTonsDay.toFixed(1);
+      document.getElementById('kpiSludgeRecycled').innerText = data.sludgeRecycledHydrocarbonsTonsDay.toFixed(1);
+      document.getElementById('kpiOpex').innerText = data.totalDailyOpexMillionRub.toFixed(2);
+
+      document.getElementById('verdictText').innerText = data.verdictRu;
+      document.getElementById('bottleneckText').innerText = `${data.bottleneckStage} (${data.minStageScore.toFixed(1)}%)`;
+
+      const banner = document.getElementById('verdictBanner');
+      const badge = document.getElementById('kpiVerdictBadge');
+      if (data.verdictCode === 'SUITABLE') {
+        banner.className = 'p-3.5 rounded-xl border border-emerald-500/40 bg-emerald-950/30 flex flex-wrap items-center justify-between gap-2 text-xs';
+        badge.innerText = 'ПРИГОДЕН (Норма ПБ ОПО)';
+        badge.className = 'text-[10px] text-emerald-400 font-semibold mt-0.5';
+      } else if (data.verdictCode === 'CONDITIONALLY_SUITABLE') {
+        banner.className = 'p-3.5 rounded-xl border border-amber-500/40 bg-amber-950/30 flex flex-wrap items-center justify-between gap-2 text-xs';
+        badge.innerText = 'УСЛОВНО ПРИГОДЕН';
+        badge.className = 'text-[10px] text-amber-400 font-semibold mt-0.5';
+      } else {
+        banner.className = 'p-3.5 rounded-xl border border-rose-500/50 bg-rose-950/40 flex flex-wrap items-center justify-between gap-2 text-xs';
+        badge.innerText = 'НЕПРИГОДЕН (Аварийный риск)';
+        badge.className = 'text-[10px] text-rose-400 font-semibold mt-0.5';
+      }
+
+      const grid = document.getElementById('stagesGrid');
+      grid.innerHTML = '';
+
+      data.stages.forEach((st, idx) => {
+        const statusColor = st.status === 'OPTIMAL'
+          ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+          : (st.status === 'WARNING' ? 'border-amber-500/40 bg-amber-500/10 text-amber-300' : 'border-rose-500/50 bg-rose-500/20 text-rose-300');
+
+        const barColor = st.utilizationPct <= 95
+          ? 'bg-emerald-500'
+          : (st.utilizationPct <= 100 ? 'bg-amber-500' : 'bg-rose-500');
+
+        const card = document.createElement('div');
+        card.className = 'glass-card stage-node rounded-2xl p-4 flex flex-col justify-between space-y-3';
+        card.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-800 text-sky-400">${st.standardCode}</span>
+                <h3 class="text-sm font-bold text-white mt-1">${st.nameRu}</h3>
+              </div>
+              <div class="text-right">
+                <span class="px-2 py-0.5 rounded text-[11px] font-bold border ${statusColor}">
+                  ${st.suitabilityScore.toFixed(1)}%
+                </span>
+              </div>
+            </div>
+
+            <!-- Capacity Utilization Bar -->
+            <div class="space-y-1 pt-1">
+              <div class="flex justify-between text-[11px]">
+                <span class="text-slate-400">Загрузка мощности узла:</span>
+                <span class="font-semibold text-white">${st.utilizationPct.toFixed(1)}% (${st.inputFlowTonsDay.toFixed(0)} / ${st.capacityTonsPerDay.toFixed(0)} т/сут)</span>
+              </div>
+              <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                <div class="h-full ${barColor}" style="width: ${Math.min(100, st.utilizationPct)}%"></div>
+              </div>
+            </div>
+
+            <!-- Key Process Metrics Grid -->
+            <div class="grid grid-cols-2 gap-2 pt-1 text-[11px]">
+              <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block">Выход целевой:</span>
+                <span class="font-bold text-emerald-300">${st.outputProductTonsDay.toFixed(1)} т/сут (КПД ${st.conversionEfficiencyPct.toFixed(1)}%)</span>
+              </div>
+              <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block">${st.id === 'SLUDGE_DISPOSAL' ? 'Остаток кека IV кл.:' : 'Отход нефтешлама:'}</span>
+                <span class="font-bold text-amber-300">${st.generatedSludgeTonsDay.toFixed(1)} т/сут</span>
+              </div>
+              <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block">Режим P / T:</span>
+                <span class="font-semibold text-slate-200">${st.pressureMpa} МПа | ${st.temperatureC} °C</span>
+              </div>
+              <div class="bg-slate-900/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-slate-400 block">Готовность Кг / АСУ:</span>
+                <span class="font-semibold text-sky-300">${st.availabilityPct.toFixed(2)}% | ПАЗ ${st.automationPct}%</span>
+              </div>
+            </div>
+
+            <!-- Diagnostics List -->
+            <div class="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800/80 space-y-1">
+              ${st.diagnostics.map(d => `<div class="text-[11px] text-slate-300 leading-snug">• ${d}</div>`).join('')}
+            </div>
+          </div>
+
+          <!-- Interactive Capacity Tuning Slider -->
+          <div class="pt-2 border-t border-slate-800/80">
+            <div class="flex justify-between text-[11px] text-slate-400 mb-1">
+              <span>Настройка проектной мощности этапа:</span>
+              <span class="text-sky-300 font-semibold">${st.capacityTonsPerDay.toFixed(0)} т/сут</span>
+            </div>
+            <input type="range"
+                   min="${st.id === 'SLUDGE_DISPOSAL' ? 500 : 7000}"
+                   max="${st.id === 'SLUDGE_DISPOSAL' ? 3000 : 20000}"
+                   step="100"
+                   value="${st.capacityTonsPerDay}"
+                   onchange="updateStageCapacity('${st.id}', this.value)"
+                   class="w-full accent-sky-500 cursor-pointer" />
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // =========================================================================
+    // SOURCE CODE INSPECTOR
+    // =========================================================================
+    let cachedSources = null;
+    async function showCode(key) {
+      if (!cachedSources) {
+        const r = await fetch('/api/source-files');
+        cachedSources = await r.json();
+      }
+      document.getElementById('codeViewer').textContent = cachedSources[key] || 'Файл не найден';
+    }
+
+    // Initialize on page load
+    window.addEventListener('DOMContentLoaded', () => {
+      initSoyuz3DViewer();
+      runBpmEvaluation();
+      showCode('c4d_script');
+    });
+  </script>
+</body>
+</html>
