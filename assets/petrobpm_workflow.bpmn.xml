@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:petro="http://petrobpm.ru/schema/oilgas"
+                  id="Definitions_PetroBPM_OilGas_Lifecycle"
+                  targetNamespace="http://petrobpm.ru/bpmn">
+  <bpmn:process id="Process_OilGas_Production_Chain" name="Производственный цикл НГК (Индекс пригодности: 97.01%)" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_Reservoir" name="Пластовый флюид (Месторождение)" />
+    <bpmn:serviceTask id="Task_EXTRACTION" name="1. Добыча нефти и газа (Куст скважин УЭЦН / Фонтан / ГЗУ)" petro:capacityTonsDay="12000.0" petro:inputFlowTonsDay="11040.0" petro:outputProductTonsDay="10706.17" petro:suitabilityScore="98.13" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_Start_EXTRACTION" sourceRef="StartEvent_Reservoir" targetRef="Task_EXTRACTION" />
+    <bpmn:serviceTask id="Task_PREPARATION" name="2. Подготовка нефти и газа (УПН / Сепарация / ЭЛОУ / Осушка)" petro:capacityTonsDay="12800.0" petro:inputFlowTonsDay="10706.17" petro:outputProductTonsDay="10184.59" petro:suitabilityScore="96.81" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_EXTRACTION_PREPARATION" sourceRef="Task_EXTRACTION" targetRef="Task_PREPARATION" />
+    <bpmn:serviceTask id="Task_REFINING" name="3. Переработка нефти и газа (АВТ-6 / Каткрекинг / Гидроочистка)" petro:capacityTonsDay="12200.0" petro:inputFlowTonsDay="10184.59" petro:outputProductTonsDay="9418.54" petro:suitabilityScore="95.32" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_PREPARATION_REFINING" sourceRef="Task_PREPARATION" targetRef="Task_REFINING" />
+    <bpmn:serviceTask id="Task_TRANSPORTATION" name="4. Транспортировка нефти и газа (МН / МГ / НПС / СИКН)" petro:capacityTonsDay="13500.0" petro:inputFlowTonsDay="9418.54" petro:outputProductTonsDay="9341.62" petro:suitabilityScore="98.21" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_REFINING_TRANSPORTATION" sourceRef="Task_REFINING" targetRef="Task_TRANSPORTATION" />
+    <bpmn:serviceTask id="Task_STORAGE" name="5. Складирование (Резервуарный парк РВСП / ПХГ / УЛФ)" petro:capacityTonsDay="14000.0" petro:inputFlowTonsDay="9341.62" petro:outputProductTonsDay="9284.6" petro:suitabilityScore="98.34" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_TRANSPORTATION_STORAGE" sourceRef="Task_TRANSPORTATION" targetRef="Task_STORAGE" />
+    <bpmn:serviceTask id="Task_SLUDGE_DISPOSAL" name="6. Утилизация нефтешлама (Трикантер / Пиролиз / Биоремедиация)" petro:capacityTonsDay="1500.0" petro:inputFlowTonsDay="1393.39" petro:outputProductTonsDay="1285.46" petro:suitabilityScore="96.35" petro:status="OPTIMAL" />
+    <bpmn:sequenceFlow id="Flow_STORAGE_SLUDGE_DISPOSAL" sourceRef="Task_STORAGE" targetRef="Task_SLUDGE_DISPOSAL" />
+    <bpmn:endEvent id="EndEvent_Commercial" name="Товарная нефть/газ и рекультивированный шлам" />
+    <bpmn:sequenceFlow id="Flow_SLUDGE_DISPOSAL_End" sourceRef="Task_SLUDGE_DISPOSAL" targetRef="EndEvent_Commercial" />
+  </bpmn:process>
+</bpmn:definitions>
